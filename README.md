@@ -1,7 +1,16 @@
 # Hardware "HID Attack" to Control 2 Computers
 
-**HARDWARE_SYSTEM_WITHOUT_BORDERS**
-A hardware based approach to system without borders where you can control two computers using a single keyboard and mouse.
+1. [Introduction](#hardware-hid-attack-to-control-2-computers)
+2. [What You Can Do with This Project](#what-you-can-do-with-this-project)
+3. [Use Cases](#use-cases)
+4. [Wiring](#wiring)
+5. [Installation](#installation)
+6. [Running the Software](#running-the-software)
+7. [Testing Wireless / Debug](#testing-wireless-independently)
+
+# Introduction
+
+A hardware based approach to microsoft's "mouse without borders" where you can control two computers using a single keyboard and mouse but...it doesn't have to be windows and you don't need to run software on one of the computers.
 
 ![ATMEGA32U4 Wiring](./images/header.png)
 
@@ -67,7 +76,11 @@ Make sure you have the ATMEGA32U4 and the NRF2401 sharing grounds between the tw
 
 # Installation
 
-Run `pip install -r requirements.txt` to install the requirements
+1. Run `pip install -r requirements.txt` to install the requirements
+
+2. load `tx.ino` on one of the ATMEGA32U4s and `rx.ino` on the other. 
+
+    You can use `Arduino` software to do this. 
 
 # Running the software 
 
@@ -76,7 +89,7 @@ run `python app.py` to kick things off. Then, you'll notice that when you take y
 When you come back the other direction, it will turn it off. 
 
 
-# Testing the communication works
+# Testing Wireless Independently
 
 To test the wireless is actually working correctly, you can install the alternative `.ino` files to test. RX on one mega and TX on the other (found in the comTests folder)
 
