@@ -82,11 +82,16 @@ void loop(void) {
         }
         case 1: {  // Mouse click
           if (payload.x == 1) {
-            Mouse.click(MOUSE_LEFT);
+            Mouse.press(MOUSE_LEFT);
             Serial.println(F("Mouse Left Click"));
           } else if (payload.x == 2) {
-            Mouse.click(MOUSE_RIGHT);
+            Mouse.press(MOUSE_RIGHT);
             Serial.println(F("Mouse Right Click"));
+          } else if (payload.x == 3) {
+            Mouse.release(MOUSE_LEFT);
+            Serial.println(F("Mouse Left+Right Click"));
+          } else if (payload.x == 4) {
+            Mouse.release(MOUSE_RIGHT);
           }
           break;
         }
