@@ -22,7 +22,7 @@ def find_arduino_port():
 
 
 def main():
-    global off_system
+    global off_system, last_keys_pressed  # Declare global variables here
 
     arduino_port = find_arduino_port()
 
@@ -47,7 +47,7 @@ def main():
 
         edge_threshold = 10
         off_system = False
-        last_keys_pressed = set()
+        last_keys_pressed = set()  # Initialize the set
 
         def scale_to_signed_byte(value, max_value):
             # Scale the value to fit within the range of -128 to 127
@@ -66,18 +66,6 @@ def main():
             absolute_y = right_monitor.y + y
             mouse.move(absolute_x, absolute_y)
             print(f"Moved cursor to relative x={x}, y={y} on rightmost monitor")
-
-        def send_click(button):
-            """Send mouse click event to Arduino."""
-            ser.write(f"C,{button}\n".encode())
-
-        def send_scroll(direction):
-            """Send scroll event to Arduino."""
-            ser.write(f"W,{direction}\n".encode())
-
-        def send_keypress(key):
-            """Send keypress event to Arduino."""
-            ser.write(f"K,{key}\n".encode())
 
         while True:
             try:
@@ -120,32 +108,30 @@ def main():
                     scaled_y = scale_movement(
                         y - right_monitor.y, host_height, target_height
                     )
-                    x_value = scale_to_signed_byte(scaled_x, target_width)
-                    y_value = scale_to_signed_byte(scaled_y, target_height)
-
-                    ser.write(f"m{x_value},{y_value}\n".encode())
-
-                    if mouse.is_pressed("left"):
-                        send_click("L")
-                    elif mouse.is_pressed("right"):
-                        send_click("R")
-
-                    if keyboard.is_pressed("up"):
-                        send_scroll("U")
-                    elif keyboard.is_pressed("down"):
-                        send_scroll("D")
+                    x_value = scale_to_signed_byte(x, host_width)
+                    y_value = scale_to_signed_byte(y, host_height)
 
                     current_keys_pressed = {
                         char
-                        for char in "abcdefghijklmnopqrstuvwxyz1234567890"
+                        for char in "abcdefghijklmnopqrstuvwxyz1234567890{\}[]\\|;:'\",<.>/?!@#$%^&*()-=_+~`"
                         if keyboard.is_pressed(char)
                     }
-
                     new_keys_pressed = current_keys_pressed - last_keys_pressed
                     last_keys_pressed = current_keys_pressed
 
                     for key in new_keys_pressed:
-                        send_keypress(key)
+                        ser.write(f"K,{key}\n".encode())
+
+                    if mouse.is_pressed("left"):
+                        ser.write(f"C,1\n".encode())
+                    elif mouse.is_pressed("right"):
+                        ser.write(f"C,2\n".encode())
+                    elif len(new_keys_pressed) > 0:
+                        for key in new_keys_pressed:
+                            ser.write(f"K,{key}\n".encode())
+                    else:
+                        print(f"Sending x={x_value}, y={y_value}")
+                        ser.write(f"M{x},{y}\n".encode())
 
                 time.sleep(0.01)
             except Exception as e:

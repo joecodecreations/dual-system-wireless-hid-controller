@@ -57,9 +57,9 @@ void loop() {
       int8_t xValue = (int8_t)xStr.toInt();
       int8_t yValue = (int8_t)yStr.toInt();
 
-      // Scale the x and y values
-      xValue *= 10;
-      yValue *= 10;
+      // Scale the x and y values (adjust for sensitivity)
+      xValue *= 1;
+      yValue *= 1;
 
       // Limit xValue and yValue to the int8_t range (-128 to 127) to prevent overflow
       xValue = constrain(xValue, -128, 127);
