@@ -18,17 +18,26 @@ mrc_sent = False  # Right click sent
 mlcr_sent = False  # Left click released sent
 mrcr_sent = False  # Right click released sent
 
-
 def find_microprocessor_port():
     ports = list(serial.tools.list_ports.comports())
     for port in ports:
+        # print(port.description)
         if (
             any(
                 keyword in port.description
-                for keyword in ["Leonardo", "Pro Micro", "Uno", "Mega", "Arduino"]
+                for keyword in [
+                    "Leonardo", 
+                    "Pro Micro", 
+                    "Uno", 
+                    "Mega", 
+                    "Arduino", 
+                    "USB Serial Device",  # Add comma here
+                    "Microsoft Natural Ergonomic Keyboard 4000"
+                ]
             )
-            or port.device == "COM24"
+            # or port.device == "COM24"
         ):
+            print("Starting COMs with" + port.device)
             return port.device
     return None
 
