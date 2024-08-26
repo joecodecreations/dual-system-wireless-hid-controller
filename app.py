@@ -265,45 +265,40 @@ def main():
 
         def handleSpecialKeys(key):
             global keyboard_wait
-            if not keyboard_wait:
-                keyboard_wait = True
-                special_key = special_key_map[key.name]
-                if key.event_type == keyboard.KEY_DOWN:
-                    ser.write(f"S,{special_key}\n".encode())
-                    if log_key_presses:
-                        print(f"Key pressed: {special_key}")
-                    # wait for brief moment
-                    # wait 1 second
-                    # time.sleep(0.1)
-                    keyboard_wait = False
-
-        def handleSpecialKeysUP(key):
-            global keyboard_wait
-            special_key = special_key_map[key.name]
-            if key.event_type == keyboard.KEY_UP:
-                ser.write(f"SR,{special_key}\n".encode())
-                if log_key_presses:
-                    print(f"Key released: {special_key}")
-                    # keyboard.on_release_key(lambda e: print(f"{e.name} released key listener"))
+            if key.name in special_keys:
+                if not keyboard_wait:
+                    print("special key: "+key.name)
+                    keyboard_wait = True
+                    special_key = special_key_map[key.name]
+                    if key.event_type == keyboard.KEY_DOWN:
+                        ser.write(f"S,{special_key}\n".encode())
+                        if log_key_presses:
+                            print(f"Key pressed: {special_key}")
+                        keyboard_wait = False
+                    if key.event_type == keyboard.KEY_UP:
+                        ser.write(f"T,{special_key}\n".encode())
+                        if log_key_presses:
+                            print(f"Key released: {special_key}")
+                        keyboard_wait = False
 
         def handleRegularKeys(key):
             global keyboard_wait
-            if not keyboard_wait:
-                keyboard_wait = True
-                if key.event_type == keyboard.KEY_DOWN:
-                    ser.write(f"K,{key.name}\n".encode())
-                    if log_key_presses:
-                        print(f"Key pressed: {key.name}")
-                    # wait 1 second
-                    # time.sleep(1.1)
-                    keyboard_wait = False
-
-        def handleRegularKeysUP(key):
-            global keyboard_wait
-            if key.event_type == keyboard.KEY_UP:
-                ser.write(f"KR,{key.name}\n".encode())
-                if log_key_presses:
-                    print(f"Key released: {key.name}")
+            # make sure that the character is in the regular keys or the special keys
+            character = key.name
+            if character in keys_without_shift or character in keys_with_shift:
+                if not keyboard_wait:
+                    keyboard_wait = True
+                    print(key.event_type)
+                    if key.event_type == keyboard.KEY_DOWN:
+                        ser.write(f"K,{key.name}\n".encode())
+                        if log_key_presses:
+                            print(f"Key pressed DOWN: {key.name}")
+                        keyboard_wait = False
+                    if key.event_type == keyboard.KEY_UP:
+                        ser.write(f"U,{key.name}\n".encode())
+                        if log_key_presses:
+                            print(f"Key released UP: {key.name}")
+                        keyboard_wait = False
 
         # Register mouse event handlers
         mouse.on_button(on_left_click, args=(), buttons="left", types="down")
@@ -311,8 +306,9 @@ def main():
         mouse.on_button(on_left_release, args=(), buttons="left", types="up")
         mouse.on_button(on_right_release, args=(), buttons="right", types="up")
 
-        for key in keys_without_shift:
-            keyboard.on_press_key(key, handleRegularKeys)
+
+        keyboard.on_press(handleRegularKeys)
+        keyboard.on_press(handleSpecialKeys)
 
         for key in special_keys:
             keyboard.on_press_key(key, handleSpecialKeys)
