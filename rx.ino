@@ -16,6 +16,7 @@ struct payload_t {
   int8_t x;      // For mouse: x movement; For keyboard: key code; For click: button (1=left, 2=right)
   int8_t y;      // For mouse: y movement; For keyboard and click: not used
   char message[32]; // message
+  bool isPressed;
 };
 
 bool initialPayloadReceived = false;
@@ -105,17 +106,21 @@ uint8_t findKeyCode(const char* keyName) {
     return 0;  // Return 0 if not found, 0 usually means "no key"
 }
 
-void handleSpecialKey(const char* message) {
+void handleSpecialKey(const char* message, bool isPressed) {
     uint8_t keyCode = findKeyCode(message);
     if (keyCode != 0) {
-        Keyboard.press(keyCode);
-        Keyboard.release(keyCode);
+        if (isPressed) {
+            Keyboard.press(keyCode);
+            Keyboard.release(keyCode);
+        } else {
+            Keyboard.release(keyCode);
+        }
     }
 }
 
 void setup(void) {
   if (LogSerial) {
-    Serial.begin(115200);
+    Serial.begin(1000000);
     while (!Serial) {
         // some boards need this because of native USB capability
     }
@@ -186,28 +191,33 @@ void loop(void) {
         }
         case 1: {  // Mouse click
           if (payload.x == 1) {
-            Mouse.press(MOUSE_LEFT);
+            if(payload.isPressed){
+                Mouse.press(MOUSE_LEFT);
+            } else {
+                Mouse.release(MOUSE_LEFT);
+            }
             if(LogSerial){
                 Serial.println(F("Mouse Left Click"));
             }
           } else if (payload.x == 2) {
-            Mouse.press(MOUSE_RIGHT);
+            if(payload.isPressed){
+                Mouse.press(MOUSE_RIGHT);
+            } else {
+                Mouse.release(MOUSE_RIGHT);
+            }
             if(LogSerial){
                 Serial.println(F("Mouse Right Click"));
             }
-          } else if (payload.x == 3) {
-            Mouse.release(MOUSE_LEFT);
-            if(LogSerial){
-                Serial.println(F("Mouse Left+Right Click"));
-            }
-          } else if (payload.x == 4) {
-            Mouse.release(MOUSE_RIGHT);
           }
           break;
         }
         case 2: {  // Keyboard input
-          Keyboard.press(payload.x);
-          Keyboard.release(payload.x);
+          if(payload.isPressed){
+            Keyboard.press(payload.x);
+            Keyboard.release(payload.x);
+          } else {
+            Keyboard.release(payload.x);
+          }
           if(LogSerial){
             Serial.print(F("Keyboard Press: "));
             Serial.println((char)payload.x);
@@ -215,7 +225,7 @@ void loop(void) {
           break;
         }
         case 3: {  // Special key or string input
-          handleSpecialKey(payload.message);
+          handleSpecialKey(payload.message, payload.isPressed);
           if(LogSerial){
             Serial.print(F("Special Key Press: "));
             Serial.println(payload.message);

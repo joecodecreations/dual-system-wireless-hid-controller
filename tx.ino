@@ -4,7 +4,7 @@
 
 RF24 radio(7, 8);               // nRF24L01(+) radio attached using Getting Started board
 RF24Network network(radio);     // Network uses that radio
-
+bool logSerial = false;
 const uint16_t this_node = 01;  // Address of our node in Octal format
 const uint16_t other_node = 00; // Address of the other node in Octal format
 // add string for message
@@ -15,20 +15,22 @@ struct payload_t {
   int8_t x;      // x movement or key/button code
   int8_t y;      // y movement, not used for clicks/keyboard
   char message[32]; // message
+  bool isPressed;
 };
 
 bool receiving = false;
 payload_t payload;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(1000000);
   while (!Serial) {
     // Wait for serial port to connect (only needed on native USB boards)
   }
-  Serial.println(F("Serial Started..."));
+  if(logSerial) Serial.println(F("Serial Started..."));
+  
 
   if (!radio.begin()) {
-    Serial.println(F("Radio hardware not responding!"));
+    if(logSerial) Serial.println(F("Radio hardware not responding!"));
     while (1);  // Infinite loop if radio fails to start
   }
 
@@ -72,6 +74,54 @@ void loop() {
       payload.x = xValue;
       payload.y = yValue;
       
+    } else if (inputString.startsWith("C,")) {  // Mouse click: C,button
+      eventMessage = "Sending Mouse Click";
+      int button = inputString.substring(2).toInt();
+      if (button == 1){
+        payload.x = 1;
+        payload.isPressed = true;
+      } else if (button == 2){
+        payload.x = 1;
+        payload.isPressed = false;
+      } else if (button == 3){
+        payload.x = 2;
+        payload.isPressed = true;
+      } else if (button == 4){
+        payload.x = 2;
+        payload.isPressed = false;
+      }
+      payload.type = 1;  // Mouse click
+      payload.y = 0;       // Not used
+
+    // keyboard up
+    } else if (inputString.startsWith("U,")) {  
+      eventMessage = "Sending keyboard type";
+      char keyCode = inputString.charAt(2);
+      payload.type = 2;  // Keyboard input
+      payload.x = keyCode;  // ASCII code of the key
+      payload.y = 0;        // Not used
+      payload.isPressed = false;
+
+    // keyboard down
+    } else if (inputString.startsWith("K,")) {  // Keyboard input: K,keycode
+      eventMessage = "Sending keyboard type";
+      char keyCode = inputString.charAt(2);
+      payload.type = 2;  // Keyboard input
+      payload.x = keyCode;  // ASCII code of the key
+      payload.y = 0;        // Not used
+      payload.isPressed = true;
+    
+    // special key up
+    } else if (inputString.startsWith("T,")) {  // Keyboard input: K,keycode
+      eventMessage = "Sending Special Key";
+      receiving = false;  // Stop receiving mouse data
+      payload.type = 3;  // Special key or string input
+      strncpy(payload.message, inputString.substring(2).c_str(), sizeof(payload.message) - 1);
+      payload.x = 0;
+      payload.y = 0;
+      payload.isPressed = false;
+
+    // special key down
     } else if (inputString.startsWith("S,")) {
       eventMessage = "Sending Special Key";
       receiving = false;  // Stop receiving mouse data
@@ -79,26 +129,18 @@ void loop() {
       strncpy(payload.message, inputString.substring(2).c_str(), sizeof(payload.message) - 1);
       payload.x = 0;
       payload.y = 0;
+      payload.isPressed = true;
 
-    } else if (inputString.startsWith("C,")) {  // Mouse click: C,button
-      eventMessage = "Sending Mouse Click";
-      int button = inputString.substring(2).toInt();
-      payload.type = 1;  // Mouse click
-      payload.x = button;  // 1 for left, 2 for right
-      payload.y = 0;       // Not used
-
-    } else if (inputString.startsWith("K,")) {  // Keyboard input: K,keycode
-      eventMessage = "Sending keyboard type";
-      char keyCode = inputString.charAt(2);
-      payload.type = 2;  // Keyboard input
-      payload.x = keyCode;  // ASCII code of the key
-      payload.y = 0;        // Not used
-    }
+    } 
 
     // Send the payload over the RF24 network
     RF24NetworkHeader header(other_node);
     bool ok = network.write(header, &payload, sizeof(payload));
-    Serial.println(ok ? eventMessage : eventMessage + " -- Failed");
+    // if input string does not start with M,
+    if(inputString.startsWith("M") == false){
+      if(logSerial) Serial.println(ok ? eventMessage : eventMessage + " -- Failed");
+    }
+
   }
 
   // Update the RF24 network regularly
