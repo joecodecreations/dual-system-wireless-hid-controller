@@ -14,6 +14,7 @@ struct payload_t {
   uint8_t type;  // 0 for mouse movement, 1 for mouse click, 2 for keyboard input
   int8_t x;      // x movement or key/button code
   int8_t y;      // y movement, not used for clicks/keyboard
+  char message[32]; // message
 };
 
 bool receiving = false;
@@ -71,9 +72,13 @@ void loop() {
       payload.x = xValue;
       payload.y = yValue;
       
-    } else if (inputString.startsWith("S")) {
-      eventMessage = "Sending Mouse Scroll";
+    } else if (inputString.startsWith("S,")) {
+      eventMessage = "Sending Special Key";
       receiving = false;  // Stop receiving mouse data
+      payload.type = 3;  // Special key or string input
+      strncpy(payload.message, inputString.substring(2).c_str(), sizeof(payload.message) - 1);
+      payload.x = 0;
+      payload.y = 0;
 
     } else if (inputString.startsWith("C,")) {  // Mouse click: C,button
       eventMessage = "Sending Mouse Click";

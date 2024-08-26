@@ -15,11 +15,103 @@ struct payload_t {
   uint8_t type;  // 0 for mouse movement, 1 for mouse click, 2 for keyboard input
   int8_t x;      // For mouse: x movement; For keyboard: key code; For click: button (1=left, 2=right)
   int8_t y;      // For mouse: y movement; For keyboard and click: not used
+  char message[32]; // message
 };
 
 bool initialPayloadReceived = false;
 int lastX = 0;
 int lastY = 0;
+
+struct KeyMap {
+    const char* name;
+    uint8_t keyCode;
+};
+
+KeyMap specialKeyMap[] = {
+    {"KEY_LEFT_CTRL", KEY_LEFT_CTRL},
+    {"KEY_LEFT_SHIFT", KEY_LEFT_SHIFT},
+    {"KEY_LEFT_ALT", KEY_LEFT_ALT},
+    {"KEY_LEFT_GUI", KEY_LEFT_GUI},  // Windows key on most keyboards
+    {"KEY_RIGHT_CTRL", KEY_RIGHT_CTRL},
+    {"KEY_RIGHT_SHIFT", KEY_RIGHT_SHIFT},
+    {"KEY_RIGHT_ALT", KEY_RIGHT_ALT},
+    {"KEY_RIGHT_GUI", KEY_RIGHT_GUI},  // Windows key on most keyboards
+    
+    {"KEY_UP_ARROW", KEY_UP_ARROW},
+    {"KEY_DOWN_ARROW", KEY_DOWN_ARROW},
+    {"KEY_LEFT_ARROW", KEY_LEFT_ARROW},
+    {"KEY_RIGHT_ARROW", KEY_RIGHT_ARROW},
+    
+    {"KEY_BACKSPACE", KEY_BACKSPACE},
+    {"KEY_TAB", KEY_TAB},
+    {"KEY_RETURN", KEY_RETURN},      // Enter key
+    {"KEY_ESC", KEY_ESC},
+    {"KEY_INSERT", KEY_INSERT},
+    {"KEY_DELETE", KEY_DELETE},
+    {"KEY_PAGE_UP", KEY_PAGE_UP},
+    {"KEY_PAGE_DOWN", KEY_PAGE_DOWN},
+    {"KEY_HOME", KEY_HOME},
+    {"KEY_END", KEY_END},
+    
+    {"KEY_CAPS_LOCK", KEY_CAPS_LOCK},
+    {"KEY_F1", KEY_F1},
+    {"KEY_F2", KEY_F2},
+    {"KEY_F3", KEY_F3},
+    {"KEY_F4", KEY_F4},
+    {"KEY_F5", KEY_F5},
+    {"KEY_F6", KEY_F6},
+    {"KEY_F7", KEY_F7},
+    {"KEY_F8", KEY_F8},
+    {"KEY_F9", KEY_F9},
+    {"KEY_F10", KEY_F10},
+    {"KEY_F11", KEY_F11},
+    {"KEY_F12", KEY_F12},
+
+    {"KEY_PRINT_SCREEN", KEY_PRINT_SCREEN},
+    {"KEY_SCROLL_LOCK", KEY_SCROLL_LOCK},
+    {"KEY_PAUSE", KEY_PAUSE},
+
+    {"KEY_NUM_LOCK", KEY_NUM_LOCK},
+
+    {"KEYPAD_0", KEY_KP_0},   // Keypad 0
+    {"KEYPAD_1", KEY_KP_1},   // Keypad 1
+    {"KEYPAD_2", KEY_KP_2},   // Keypad 2
+    {"KEYPAD_3", KEY_KP_3},   // Keypad 3
+    {"KEYPAD_4", KEY_KP_4},   // Keypad 4
+    {"KEYPAD_5", KEY_KP_5},   // Keypad 5
+    {"KEYPAD_6", KEY_KP_6},   // Keypad 6
+    {"KEYPAD_7", KEY_KP_7},   // Keypad 7
+    {"KEYPAD_8", KEY_KP_8},   // Keypad 8
+    {"KEYPAD_9", KEY_KP_9},   // Keypad 9
+
+    {"KEYPAD_DIVIDE", KEY_KP_SLASH},      // Keypad /
+    {"KEYPAD_MULTIPLY", KEY_KP_ASTERISK}, // Keypad *
+    {"KEYPAD_SUBTRACT", KEY_KP_MINUS},    // Keypad -
+    {"KEYPAD_ADD", KEY_KP_PLUS},          // Keypad +
+    {"KEYPAD_ENTER", KEY_KP_ENTER},       // Keypad Enter
+    {"KEYPAD_DOT", KEY_KP_DOT},           // Keypad .
+
+    {"KEY_SPACE", ' '},  // Space can be represented by the space character
+
+
+};
+
+uint8_t findKeyCode(const char* keyName) {
+    for (const auto& key : specialKeyMap) {
+        if (strcmp(key.name, keyName) == 0) {
+            return key.keyCode;
+        }
+    }
+    return 0;  // Return 0 if not found, 0 usually means "no key"
+}
+
+void handleSpecialKey(const char* message) {
+    uint8_t keyCode = findKeyCode(message);
+    if (keyCode != 0) {
+        Keyboard.press(keyCode);
+        Keyboard.release(keyCode);
+    }
+}
 
 void setup(void) {
   if (LogSerial) {
@@ -122,6 +214,15 @@ void loop(void) {
           }
           break;
         }
+        case 3: {  // Special key or string input
+          handleSpecialKey(payload.message);
+          if(LogSerial){
+            Serial.print(F("Special Key Press: "));
+            Serial.println(payload.message);
+          }
+          break;
+        }
+        
       }
     }
   }

@@ -17,6 +17,108 @@ mlc_sent = False  # Left click sent
 mrc_sent = False  # Right click sent
 mlcr_sent = False  # Left click released sent
 mrcr_sent = False  # Right click released sent
+special_keys_pressed = set()  # Initialize the set
+shift_sent = False
+keyboard_wait = False
+
+
+# Define an array of keys that don't require the Shift key
+keys_without_shift = [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "0",
+    "`",
+    "-",
+    "=",
+    "[",
+    "]",
+    ";",
+    "'",
+    ",",
+    ".",
+    "/",
+    "\\",
+]
+keys_with_shift = [
+    "~",
+    "!",
+    "@",
+    "#",
+    "$",
+    "%",
+    "^",
+    "&",
+    "*",
+    "(",
+    ")",
+    "_",
+    "+",
+    "{",
+    "}",
+    "|",
+    ":",
+    '"',
+    "<",
+    ">",
+    "?",
+]
+special_keys = [
+    "shift",
+    "ctrl",
+    "alt",
+    "space",
+    "enter",
+    "backspace",
+    "tab",
+    "esc",
+    "up",
+    "down",
+    "left",
+    "right",
+    "capslock",
+    "delete",
+    "home",
+    "end",
+    "page up",
+    "page down",
+    "insert",
+    "print screen",
+    "pause",
+]
+
 
 def find_microprocessor_port():
     ports = list(serial.tools.list_ports.comports())
@@ -26,13 +128,13 @@ def find_microprocessor_port():
             any(
                 keyword in port.description
                 for keyword in [
-                    "Leonardo", 
-                    "Pro Micro", 
-                    "Uno", 
-                    "Mega", 
-                    "Arduino", 
+                    "Leonardo",
+                    "Pro Micro",
+                    "Uno",
+                    "Mega",
+                    "Arduino",
                     "USB Serial Device",  # Add comma here
-                    "Microsoft Natural Ergonomic Keyboard 4000"
+                    "Microsoft Natural Ergonomic Keyboard 4000",
                 ]
             )
             # or port.device == "COM24"
@@ -43,7 +145,7 @@ def find_microprocessor_port():
 
 
 def main():
-    global off_system, last_keys_pressed, log_mouse_movement, log_key_presses, log_operational_messages, log_microcontroller_messages, shift_logged
+    global special_keys_pressed, keyboard_wait, shift_sent, off_system, last_keys_pressed, log_mouse_movement, log_key_presses, log_operational_messages, log_microcontroller_messages, shift_logged
     global mlc_sent, mrc_sent, mlcr_sent, mrcr_sent  # Declare these as global to modify them inside the functions
 
     log_microcontroller_messages = False
@@ -135,12 +237,89 @@ def main():
                 ser.write(f"C,4\n".encode())
                 if log_key_presses:
                     print("Right mouse button released")
+                # keyboard.on_release_key(lambda e: print(f"{e.name} released key listener"))
+
+        special_key_map = {
+            "shift": "KEY_LEFT_SHIFT",
+            "ctrl": "KEY_LEFT_CTRL",
+            "alt": "KEY_LEFT_ALT",
+            "space": "KEY_SPACE",
+            "enter": "KEY_RETURN",
+            "backspace": "KEY_BACKSPACE",
+            "tab": "KEY_TAB",
+            "esc": "KEY_ESC",
+            "up": "KEY_UP_ARROW",
+            "down": "KEY_DOWN_ARROW",
+            "left": "KEY_LEFT_ARROW",
+            "right": "KEY_RIGHT_ARROW",
+            "capslock": "KEY_CAPS_LOCK",
+            "delete": "KEY_DELETE",
+            "home": "KEY_HOME",
+            "end": "KEY_END",
+            "page up": "KEY_PAGE_UP",
+            "page down": "KEY_PAGE_DOWN",
+            "insert": "KEY_INSERT",
+            "print screen": "KEY_PRINT_SCREEN",
+            "pause": "KEY_PAUSE",
+        }
+
+        def handleSpecialKeys(key):
+            global keyboard_wait
+            if not keyboard_wait:
+                keyboard_wait = True
+                special_key = special_key_map[key.name]
+                if key.event_type == keyboard.KEY_DOWN:
+                    ser.write(f"S,{special_key}\n".encode())
+                    if log_key_presses:
+                        print(f"Key pressed: {special_key}")
+                    # wait for brief moment
+                    # wait 1 second
+                    # time.sleep(0.1)
+                    keyboard_wait = False
+
+        def handleSpecialKeysUP(key):
+            global keyboard_wait
+            special_key = special_key_map[key.name]
+            if key.event_type == keyboard.KEY_UP:
+                ser.write(f"SR,{special_key}\n".encode())
+                if log_key_presses:
+                    print(f"Key released: {special_key}")
+                    # keyboard.on_release_key(lambda e: print(f"{e.name} released key listener"))
+
+        def handleRegularKeys(key):
+            global keyboard_wait
+            if not keyboard_wait:
+                keyboard_wait = True
+                if key.event_type == keyboard.KEY_DOWN:
+                    ser.write(f"K,{key.name}\n".encode())
+                    if log_key_presses:
+                        print(f"Key pressed: {key.name}")
+                    # wait 1 second
+                    # time.sleep(1.1)
+                    keyboard_wait = False
+
+        def handleRegularKeysUP(key):
+            global keyboard_wait
+            if key.event_type == keyboard.KEY_UP:
+                ser.write(f"KR,{key.name}\n".encode())
+                if log_key_presses:
+                    print(f"Key released: {key.name}")
 
         # Register mouse event handlers
         mouse.on_button(on_left_click, args=(), buttons="left", types="down")
         mouse.on_button(on_right_click, args=(), buttons="right", types="down")
         mouse.on_button(on_left_release, args=(), buttons="left", types="up")
         mouse.on_button(on_right_release, args=(), buttons="right", types="up")
+
+        for key in keys_without_shift:
+            keyboard.on_press_key(key, handleRegularKeys)
+            keyboard.on_release_key(key, handleRegularKeysUP)
+        # for key in keys_with_shift:
+        #     keyboard.on_press_key(key, handleRegularKeys)
+        #     keyboard.on_release_key(key, handleRegularKeysUP)
+        for key in special_keys:
+            keyboard.on_press_key(key, handleSpecialKeys)
+            keyboard.on_release_key(key, handleSpecialKeysUP)
 
         while True:
             try:
@@ -181,31 +360,29 @@ def main():
                         current_keys_pressed = {
                             char
                             for char in (
-                               "abcdefghijklmnopqrstuvwxyz1234567890`-=[];',./"
+                                "abcdefghijklmnopqrstuvwxyz1234567890`-=[];',./"
                             )
                             if keyboard.is_pressed(char)
                         }
                     else:
                         current_keys_pressed = {
                             char
-                            for char in (
-                                '~!@#$%^&*()_+{}|:"<>?'
-                            )
+                            for char in ('~!@#$%^&*()_+{}|:"<>?')
                             if keyboard.is_pressed(char)
                         }
 
                     new_keys_pressed = current_keys_pressed - last_keys_pressed
                     last_keys_pressed = current_keys_pressed
 
-                    if len(new_keys_pressed) > 0:
-                        for key in new_keys_pressed:
-                            if log_key_presses:
-                                print(f"Key pressed: {key}")
-                            ser.write(f"K,{key}\n".encode())
-                    else:
-                        if log_mouse_movement:
-                            print(f"Sending x={x}, y={y}")
-                        ser.write(f"M{x},{y}\n".encode())
+                    # if len(new_keys_pressed) > 0:
+                    #     for key in new_keys_pressed:
+                    #         if log_key_presses:
+                    #             print(f"Key pressed: {key}")
+                    #         ser.write(f"K,{key}\n".encode())
+                    # else:
+                    if log_mouse_movement:
+                        print(f"Sending x={x}, y={y}")
+                    ser.write(f"M{x},{y}\n".encode())
 
                 time.sleep(0.01)
             except TimeoutError as e:
