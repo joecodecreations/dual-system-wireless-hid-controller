@@ -313,13 +313,10 @@ def main():
 
         for key in keys_without_shift:
             keyboard.on_press_key(key, handleRegularKeys)
-            keyboard.on_release_key(key, handleRegularKeysUP)
-        # for key in keys_with_shift:
-        #     keyboard.on_press_key(key, handleRegularKeys)
-        #     keyboard.on_release_key(key, handleRegularKeysUP)
+
         for key in special_keys:
             keyboard.on_press_key(key, handleSpecialKeys)
-            keyboard.on_release_key(key, handleSpecialKeysUP)
+
 
         while True:
             try:
@@ -354,25 +351,6 @@ def main():
                         time.sleep(0.2)
 
                 if off_system:
-
-                    if not shift_pressed:
-
-                        current_keys_pressed = {
-                            char
-                            for char in (
-                                "abcdefghijklmnopqrstuvwxyz1234567890`-=[];',./"
-                            )
-                            if keyboard.is_pressed(char)
-                        }
-                    else:
-                        current_keys_pressed = {
-                            char
-                            for char in ('~!@#$%^&*()_+{}|:"<>?')
-                            if keyboard.is_pressed(char)
-                        }
-
-                    new_keys_pressed = current_keys_pressed - last_keys_pressed
-                    last_keys_pressed = current_keys_pressed
 
                     # if len(new_keys_pressed) > 0:
                     #     for key in new_keys_pressed:
