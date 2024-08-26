@@ -6,7 +6,7 @@
 
 RF24 radio(7, 8);               // nRF24L01(+) radio attached using Getting Started board
 RF24Network network(radio);     // Network uses that radio
-
+const bool LogSerial = false;
 const uint16_t this_node = 00;  // Address of our node in Octal format
 const uint16_t other_node = 01; // Address of the other node in Octal format
 
@@ -22,14 +22,21 @@ int lastX = 0;
 int lastY = 0;
 
 void setup(void) {
-  Serial.begin(115200);
-  while (!Serial) {
-    // some boards need this because of native USB capability
+  if (LogSerial) {
+    Serial.begin(115200);
+    while (!Serial) {
+        // some boards need this because of native USB capability
+    }
+
+    Serial.println(F("Serial Started..."));
   }
-  Serial.println(F("Serial Started..."));
+
 
   if (!radio.begin()) {
-    Serial.println(F("Radio hardware not responding!"));
+    if (LogSerial) {
+        Serial.println(F("Radio hardware not responding!"));
+    }
+
     while (1) {
       // hold in infinite loop
     }
@@ -56,7 +63,10 @@ void loop(void) {
       lastX = payload.x;
       lastY = payload.y;
       initialPayloadReceived = true;
-      Serial.println(F("Initial payload received. No mouse movement yet."));
+
+      if(LogSerial){
+        Serial.println(F("Initial payload received. No mouse movement yet."));
+      }
     } else {
       switch (payload.type) {
         case 0: {  // Mouse movement
@@ -72,29 +82,44 @@ void loop(void) {
           lastY = payload.y;
 
           // Debug output
-          if (deltaX != 0 || deltaY != 0) {
-            Serial.print(F("Mouse move X: "));
-            Serial.print(deltaX);
-            Serial.print(F(", Y: "));
-            Serial.println(deltaY);
+          if(LogSerial){
+            if (deltaX != 0 || deltaY != 0) {
+                Serial.print(F("Mouse move X: "));
+                Serial.print(deltaX);
+                Serial.print(F(", Y: "));
+                Serial.println(deltaY);
+            }
           }
           break;
         }
         case 1: {  // Mouse click
           if (payload.x == 1) {
-            Mouse.click(MOUSE_LEFT);
-            Serial.println(F("Mouse Left Click"));
+            Mouse.press(MOUSE_LEFT);
+            if(LogSerial){
+                Serial.println(F("Mouse Left Click"));
+            }
           } else if (payload.x == 2) {
-            Mouse.click(MOUSE_RIGHT);
-            Serial.println(F("Mouse Right Click"));
+            Mouse.press(MOUSE_RIGHT);
+            if(LogSerial){
+                Serial.println(F("Mouse Right Click"));
+            }
+          } else if (payload.x == 3) {
+            Mouse.release(MOUSE_LEFT);
+            if(LogSerial){
+                Serial.println(F("Mouse Left+Right Click"));
+            }
+          } else if (payload.x == 4) {
+            Mouse.release(MOUSE_RIGHT);
           }
           break;
         }
         case 2: {  // Keyboard input
           Keyboard.press(payload.x);
           Keyboard.release(payload.x);
-          Serial.print(F("Keyboard Press: "));
-          Serial.println((char)payload.x);
+          if(LogSerial){
+            Serial.print(F("Keyboard Press: "));
+            Serial.println((char)payload.x);
+          }
           break;
         }
       }

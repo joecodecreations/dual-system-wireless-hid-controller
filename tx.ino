@@ -7,7 +7,8 @@ RF24Network network(radio);     // Network uses that radio
 
 const uint16_t this_node = 01;  // Address of our node in Octal format
 const uint16_t other_node = 00; // Address of the other node in Octal format
-
+// add string for message
+String eventMessage = "";
 // Structure of our payload
 struct payload_t {
   uint8_t type;  // 0 for mouse movement, 1 for mouse click, 2 for keyboard input
@@ -46,6 +47,7 @@ void loop() {
     inputString.trim();  // Remove any extraneous whitespace
 
     if (inputString.startsWith("M")) {
+      eventMessage = "Sending Mouse Movement";
       receiving = true;  // Start receiving mouse data
       int commaIndex = inputString.indexOf(',');
       
@@ -68,37 +70,30 @@ void loop() {
       payload.type = 0;  // Mouse movement
       payload.x = xValue;
       payload.y = yValue;
-
-      // Send the payload over the RF24 network
-      RF24NetworkHeader header(other_node);
-      bool ok = network.write(header, &payload, sizeof(payload));
-      Serial.println(ok ? F("Data sent!") : F("Failed to send data."));
       
     } else if (inputString.startsWith("S")) {
+      eventMessage = "Sending Mouse Scroll";
       receiving = false;  // Stop receiving mouse data
 
     } else if (inputString.startsWith("C,")) {  // Mouse click: C,button
+      eventMessage = "Sending Mouse Click";
       int button = inputString.substring(2).toInt();
       payload.type = 1;  // Mouse click
       payload.x = button;  // 1 for left, 2 for right
       payload.y = 0;       // Not used
 
-      // Send the payload over the RF24 network
-      RF24NetworkHeader header(other_node);
-      bool ok = network.write(header, &payload, sizeof(payload));
-      Serial.println(ok ? F("Mouse click sent!") : F("Failed to send mouse click."));
-      
     } else if (inputString.startsWith("K,")) {  // Keyboard input: K,keycode
+      eventMessage = "Sending keyboard type";
       char keyCode = inputString.charAt(2);
       payload.type = 2;  // Keyboard input
       payload.x = keyCode;  // ASCII code of the key
       payload.y = 0;        // Not used
-
-      // Send the payload over the RF24 network
-      RF24NetworkHeader header(other_node);
-      bool ok = network.write(header, &payload, sizeof(payload));
-      Serial.println(ok ? F("Keyboard input sent!") : F("Failed to send keyboard input."));
     }
+
+    // Send the payload over the RF24 network
+    RF24NetworkHeader header(other_node);
+    bool ok = network.write(header, &payload, sizeof(payload));
+    Serial.println(ok ? eventMessage : eventMessage + " -- Failed");
   }
 
   // Update the RF24 network regularly
