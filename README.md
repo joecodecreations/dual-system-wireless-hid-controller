@@ -7,6 +7,7 @@
 5. [Installation](#installation)
 6. [Running the Software](#running-the-software)
 7. [Testing Wireless / Debug](#testing-wireless-independently)
+8. [3D printed Container](#3d-printed-container)
 
 # Introduction
 
@@ -93,7 +94,22 @@ When you come back the other direction, it will turn it off.
 
 To test the wireless is actually working correctly, you can install the alternative `.ino` files to test. RX on one mega and TX on the other (found in the comTests folder)
 
+# 3D Printed Container
 
+Okay, so now you have your hardware wired up, your software hopefully working and you'd like to put this in a container. I went ahead and included an STL file for the top and bottom of a container I created to house these. 
+![3D Diagram](./3d_Files/container_diagram.png)
+
+The dimensions of this container is 
+
+`40mm Height` X `22mm Width` X `112 Length` 
+
+I has a 6mm hole for the cord and a 7mm hole for the antennea  
+
+You can find these files in the `3d_files` folder
+
+The sliced files are for a resin 3D printer but you can use the `.stl` files to import and slice with whatever software. 
+
+There's also .obj files if you want to plop them somewhere to edit. 
 
 
 
