@@ -6,11 +6,22 @@ import time
 import keyboard
 from screeninfo import get_monitors
 
+# Configuration
+host_system = "windows"  # Options: "windows", "linux", "mac"
+target_system = "mac"  # Options: "windows", "linux", "mac"
+
+
 # Global variables
 mouse_left_click = False
 mouse_right_click = False
 mouse_left_released = False
 mouse_right_released = False
+
+log_microcontroller_messages = True
+log_operational_messages = True
+log_mouse_movement = False
+log_key_presses = False
+
 
 # Track sent mouse actions
 mlc_sent = False  # Left click sent
@@ -18,7 +29,7 @@ mrc_sent = False  # Right click sent
 mlcr_sent = False  # Left click released sent
 mrcr_sent = False  # Right click released sent
 special_keys_pressed = set()  # Initialize the set
-shift_sent = False
+isSpecialKeyPressed = False
 keyboard_wait = False
 
 off_system = False
@@ -26,77 +37,11 @@ off_system = False
 
 # Define an array of keys that don't require the Shift key
 keys_without_shift = [
-    "a",
-    "b",
-    "c",
-    "d",
-    "e",
-    "f",
-    "g",
-    "h",
-    "i",
-    "j",
-    "k",
-    "l",
-    "m",
-    "n",
-    "o",
-    "p",
-    "q",
-    "r",
-    "s",
-    "t",
-    "u",
-    "v",
-    "w",
-    "x",
-    "y",
-    "z",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "0",
-    "`",
-    "-",
-    "=",
-    "[",
-    "]",
-    ";",
-    "'",
-    ",",
-    ".",
-    "/",
-    "\\",
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
+    "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "1", "2", "3", "4", "5", "6",
+    "7", "8", "9", "0", "`", "-", "=", "[", "]", ";", "'", ",", ".", "/", "\\"
 ]
-keys_with_shift = [
-    "~",
-    "!",
-    "@",
-    "#",
-    "$",
-    "%",
-    "^",
-    "&",
-    "*",
-    "(",
-    ")",
-    "_",
-    "+",
-    "{",
-    "}",
-    "|",
-    ":",
-    '"',
-    "<",
-    ">",
-    "?",
-]
+keys_with_shift = ["~", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+", "{", "}", "|", ":", '"', "<", ">", "?"]
 special_keys = [
     "shift",
     "ctrl",
@@ -119,6 +64,20 @@ special_keys = [
     "insert",
     "print screen",
     "pause",
+    "cmd",
+    "win",
+    "super",
+    "option",
+    "right gui",
+    "right shift",
+    "right alt",
+    "right control",
+    "left gui",
+    "left shift",
+    "left alt",
+    "left control",
+    "left windows",
+    "right windows",
 ]
 
 
@@ -147,14 +106,9 @@ def find_microprocessor_port():
 
 
 def main():
-    global special_keys_pressed, special_keys, keyboard_wait, shift_sent, off_system, last_keys_pressed, log_mouse_movement, log_key_presses, log_operational_messages, log_microcontroller_messages, shift_logged
+    global host_system, target_system, isSpecialKeyPressed, special_keys_pressed, special_keys, keyboard_wait, off_system, last_keys_pressed, log_mouse_movement, log_key_presses, log_operational_messages, log_microcontroller_messages
     global mlc_sent, mrc_sent, mlcr_sent, mrcr_sent  # Declare these as global to modify them inside the functions
 
-    log_microcontroller_messages = True
-    log_operational_messages = True
-    log_mouse_movement = False
-    log_key_presses = False
-    shift_logged = False
 
     microprocessor_port = find_microprocessor_port()
 
@@ -238,6 +192,62 @@ def main():
             if log_key_presses:
                 print("Right mouse button released")
 
+
+        key_mapping = {
+            "windows": {
+                "ctrl": "ctrl",
+                "alt": "alt",
+                "win": "cmd",  # Treat Win on Windows as Cmd on Mac
+                "shift": "shift",
+                "delete": "delete",
+                "backspace": "backspace",
+                "enter": "enter",
+                "home": "home",
+                "end": "end",
+                "pageup": "page up",
+                "pagedown": "page down",
+                "esc": "esc",
+                "tab": "tab",
+                "space": "space",
+                "cmd": "win",  # Treat CMD on Mac as Win on Windows
+                "left windows": "cmd",
+            },
+            "mac": {
+                "ctrl": "ctrl",
+                "option": "alt",  # Treat Option on Mac as Alt on Windows/Linux
+                "cmd": "cmd",
+                "shift": "shift",
+                "delete": "backspace",  # Mac delete is equivalent to backspace
+                "fn+delete": "delete",
+                "return": "enter",
+                "home": "home",
+                "end": "end",
+                "pageup": "page up",
+                "pagedown": "page down",
+                "esc": "esc",
+                "tab": "tab",
+                "space": "space",
+                "super": "cmd",  # Treat Super on Linux as CMD on Mac
+            },
+            "linux": {
+                "ctrl": "ctrl",
+                "alt": "alt",
+                "super": "super",
+                "shift": "shift",
+                "delete": "delete",
+                "backspace": "backspace",
+                "enter": "enter",
+                "home": "home",
+                "end": "end",
+                "pageup": "page up",
+                "pagedown": "page down",
+                "esc": "esc",
+                "tab": "tab",
+                "space": "space",
+                "cmd": "super"  # Treat CMD on Mac as Super on Linux
+            }
+        }
+
         special_key_map = {
             "shift": "KEY_LEFT_SHIFT",
             "ctrl": "KEY_LEFT_CTRL",
@@ -260,46 +270,195 @@ def main():
             "insert": "KEY_INSERT",
             "print screen": "KEY_PRINT_SCREEN",
             "pause": "KEY_PAUSE",
+            "cmd": "KEY_LEFT_GUI",
+            "win": "KEY_LEFT_GUI",
+            "super": "KEY_LEFT_GUI",
+            "option": "KEY_LEFT_ALT",
+            "right gui": "KEY_RIGHT_GUI",
+            "right shift": "KEY_RIGHT_SHIFT",
+            "right alt": "KEY_RIGHT_ALT",
+            "right control": "KEY_RIGHT_CTRL",
+            "left gui": "KEY_LEFT_GUI",
         }
 
+        # Arduino-specific mapping using Keyboard.h
+        special_key_map = {
+            "shift": "KEY_LEFT_SHIFT",
+            "ctrl": "KEY_LEFT_CTRL",
+            "alt": "KEY_LEFT_ALT",
+            "space": "KEY_SPACE",
+            "enter": "KEY_RETURN",
+            "backspace": "KEY_BACKSPACE",
+            "tab": "KEY_TAB",
+            "esc": "KEY_ESC",
+            "up": "KEY_UP_ARROW",
+            "down": "KEY_DOWN_ARROW",
+            "left": "KEY_LEFT_ARROW",
+            "right": "KEY_RIGHT_ARROW",
+            "capslock": "KEY_CAPS_LOCK",
+            "delete": "KEY_DELETE",
+            "home": "KEY_HOME",
+            "end": "KEY_END",
+            "page up": "KEY_PAGE_UP",
+            "page down": "KEY_PAGE_DOWN",
+            "insert": "KEY_INSERT",
+            "print screen": "KEY_PRINT_SCREEN",
+            "pause": "KEY_PAUSE",
+            "cmd": "KEY_LEFT_GUI",
+            "win": "KEY_LEFT_GUI",
+            "super": "KEY_LEFT_GUI",
+            "option": "KEY_LEFT_ALT",
+            "right gui": "KEY_RIGHT_GUI",
+            "right shift": "KEY_RIGHT_SHIFT",
+            "right alt": "KEY_RIGHT_ALT",
+            "right control": "KEY_RIGHT_CTRL",
+            "left gui": "KEY_LEFT_GUI",
+        }
+        def connect_keyboard_listeners(prevent_system_output=False):
+            global off_system
+            if off_system:
+                prevent_system_output = True
+            print("Connecting keyboard listeners and setting suppress to: " + str(prevent_system_output))
+            keyboard.unhook(keyboard.on_press(handleKeys))
+            keyboard.on_press(handleKeys, suppress=prevent_system_output)
+
+        def map_key_to_arduino(input_os, target_os, key_pressed):
+            # Normalize the key name to lowercase
+            key_pressed_lowered = key_pressed.lower()
+
+            # Step 1: Convert the key from the input OS to a general target key
+            if input_os not in key_mapping:
+                return key_pressed  # Unsupported OS
+
+            target_key_intermediate = key_mapping[input_os].get(key_pressed_lowered, key_pressed_lowered)
+
+            # Step 2: Convert the intermediate key to the target OS key
+            if target_os not in key_mapping:
+                return key_pressed  # Unsupported OS
+
+            target_key_final = key_mapping[target_os].get(target_key_intermediate, target_key_intermediate)
+
+            # Step 3: Map the final target key to an Arduino key code
+            arduino_key_code = special_key_map.get(target_key_final.lower())
+
+            if arduino_key_code:
+                return arduino_key_code
+            else:
+                return target_key_final  # No mapping found, return the intermediate key as a fallback
+
+                
+        def send_Keys(handleSpecialKeys):
+            global special_keys_pressed, isSpecialKeyPressed, target_system, keyboard_wait
+            try:
+                if not special_keys_pressed:
+                    print("No key pressed")
+                    return
+                
+                print('Sending keys: ' + str(special_keys_pressed))
+                isSpecialKeyPressed = False
+                keyboard_wait = False
+                keys_to_send = set()
+
+                # map special_key = special_key_map[key.name] for each key in special_keys_pressed or return character
+                for key in special_keys_pressed:
+                    if key in special_keys:
+                        special_key_mapped = map_key_to_arduino(host_system, target_system, key)
+                        if special_key_mapped is None:
+                            special_key_mapped = key
+                        keys_to_send.add(special_key_mapped)
+                        break
+                    else:
+                        keys_to_send.add(key)
+
+
+                # add back in any missing single characters to the list of keys to send
+                for key in special_keys_pressed:
+                    if key not in keys_to_send and len(key) == 1:
+                        keys_to_send.add(key)
+                # always make sure the keys to send are in the order of longest keys first
+                keys_to_send = sorted(keys_to_send, key=len, reverse=True)
+                print(f"\n\nKeys to send: {keys_to_send}")
+
+                if len(keys_to_send) == 1:
+                    print('\n\n single key in special group')
+                    key = next(iter(special_keys_pressed))
+                    if key in special_keys:
+                        key = map_key_to_arduino(host_system, target_system, key)
+                        ser.write(f"S,{key}\n".encode())
+                    else:
+                        ser.write(f"K,{key}\n".encode())
+                    if log_key_presses:
+                        print(f"Special Key pressed: {key}")
+                else:
+                    ser.write(f"X,{','.join(keys_to_send)}\n".encode())
+                    if log_key_presses:
+                        print(f"Multiple keys pressed: {','.join(keys_to_send)}")
+
+                special_keys_pressed.clear()
+
+            except Exception as e:
+                print(f"Error while sending keys: {e}")
+                
+
         def handleSpecialKeys(key):
-            global keyboard_wait, special_keys, off_system
+            print(f"key: {key}")
+            global keyboard_wait, special_keys, off_system, isSpecialKeyPressed, special_keys_pressed
             if off_system:
                 if key.name in special_keys:
-                    if not keyboard_wait:
-                        print("special key: " + key.name)
-                        keyboard_wait = True
-                        special_key = special_key_map[key.name]
+                        # up or down
+                        upOrDown = key.event_type
+                        # print(f"up or down: {upOrDown}")
                         if key.event_type == keyboard.KEY_DOWN:
-                            ser.write(f"S,{special_key}\n".encode())
-                            if log_key_presses:
-                                print(f"Key pressed: {special_key}")
-                            keyboard_wait = False
-                        # if key.event_type == keyboard.KEY_UP:
-                        #     ser.write(f"T,{special_key}\n".encode())
-                        #     if log_key_presses:
-                        #         print(f"Key released: {special_key}")
-                        #     keyboard_wait = False
+                            # if we didnt already press the special key
+                            if key.name not in special_keys_pressed:
+                                # add it to our array of key combinations
+                                if log_key_presses:
+                                    print(f"Special Key Added To Combo: {key.name}")
+                                special_keys_pressed.add(key.name)
+                                # track that we have pressed a special key so that all regular keys get added to combo
+                                isSpecialKeyPressed = True
+                                if log_key_presses:
+                                    print(f"Special Key pressed DOWN: {key.name}")
+                                keyboard.hook_key(key.name, handleSpecialKeys)
+                        if key.event_type == keyboard.KEY_UP and key.name in special_keys_pressed:
+                           if log_key_presses:
+                               print(f"Special Key released: {key.name}")
+                           send_Keys(handleSpecialKeys)
+                           connect_keyboard_listeners(True)
 
-        def handleRegularKeys(key):
-            global keyboard_wait, off_system
+
+
+        def handleKeys(key):
+            global target_system, keyboard_wait, off_system, isSpecialKeyPressed, special_keys_pressed,keys_without_shift, keys_with_shift
+            print('handle keys called')
+            print(key)
+            if key.name in special_keys:
+                handleSpecialKeys(key)
             if off_system:
-                # make sure that the character is in the regular keys or the special keys
                 character = key.name
-                if character in keys_without_shift or character in keys_with_shift:
-                    if not keyboard_wait:
-                        keyboard_wait = True
-                        print(key.event_type)
-                        if key.event_type == keyboard.KEY_DOWN:
-                            ser.write(f"K,{key.name}\n".encode())
-                            if log_key_presses:
-                                print(f"Key pressed DOWN: {key.name}")
-                            keyboard_wait = False
-                        # if key.event_type == keyboard.KEY_UP:
-                        #     ser.write(f"U,{key.name}\n".encode())
-                        #     if log_key_presses:
-                        #         print(f"Key released UP: {key.name}")
-                        #     keyboard_wait = False
+                # handle key combinations
+                if isSpecialKeyPressed:
+                    print(f"Regular Key Added To Combo: {key.name}")
+                    if key.event_type == keyboard.KEY_DOWN:
+                        special_keys_pressed.add(key.name)
+                        if log_operational_messages:
+                            print(f"Key Combo gathering....adding: {key.name}")
+
+                else:
+                    # handle regular typing 
+                    print(f"Key pressed: {key.name}")
+                    character = key.name
+                    if character in keys_without_shift or character in keys_with_shift:
+                        if not keyboard_wait:
+                            keyboard_wait = True
+                            print(key.event_type)
+                            if key.event_type == keyboard.KEY_DOWN:
+                                ser.write(f"K,{key.name}\n".encode())
+                                if log_key_presses:
+                                    print(f"Key pressed DOWN: {key.name}")
+                                keyboard_wait = False
+                        else:
+                            print('keyboard wait')
 
         def handleMouseClick(event):
             # print("mouse event: " + str(event))
@@ -321,14 +480,17 @@ def main():
                         on_right_click()
                     else:
                         on_right_release()
+        
+        def remove_keyboard_listeners():
+            print("Removing keyboard listeners")
+            keyboard.unhook_all()
 
-        # Register mouse event handlers
-        # mouse.on_button(handleMouseClick(), args=(), buttons=[mouse.LEFT, mouse.RIGHT, mouse.MIDDLE], types=[mouse.DOWN, mouse.UP])
+        
         mouse.hook(handleMouseClick)
+        
+        
 
-        keyboard.on_press(handleRegularKeys)
-        keyboard.on_press(handleSpecialKeys)
-
+        # connect_keyboard_listeners(False)
         while True:
             try:
                 if ser.in_waiting > 0:
@@ -347,6 +509,7 @@ def main():
                         and not off_system
                     ):
                         off_system = True
+                        connect_keyboard_listeners(True)
                         if log_operational_messages:
                             print("Switching to target system...")
 
@@ -355,6 +518,7 @@ def main():
 
                     elif x <= right_monitor.x + edge_threshold and off_system:
                         off_system = False
+                        remove_keyboard_listeners()
                         if log_operational_messages:
                             print("Switching back to host system...")
 

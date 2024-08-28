@@ -6,7 +6,7 @@
 
 RF24 radio(7, 8);               // nRF24L01(+) radio attached using Getting Started board
 RF24Network network(radio);     // Network uses that radio
-const bool LogSerial = false;
+const bool LogSerial = true;
 const uint16_t this_node = 00;  // Address of our node in Octal format
 const uint16_t other_node = 01; // Address of the other node in Octal format
 
@@ -15,7 +15,7 @@ struct payload_t {
   uint8_t type;  // 0 for mouse movement, 1 for mouse click, 2 for keyboard input
   int8_t x;      // For mouse: x movement; For keyboard: key code; For click: button (1=left, 2=right)
   int8_t y;      // For mouse: y movement; For keyboard and click: not used
-  char message[32]; // message
+  char message[128]; // message
   bool isPressed;
 };
 
@@ -230,6 +230,30 @@ void loop(void) {
             Serial.print(F("Special Key Press: "));
             Serial.println(payload.message);
           }
+          break;
+        }
+        case 4: {  // Key combinations
+          if(LogSerial){
+            Serial.print(F("Key Combinations: "));
+            Serial.println(payload.message);
+          }
+          // get payload.message and split it by comma
+          char* pch;
+          pch = strtok(payload.message, ",");
+          // do keyboard press for each key then release all 
+          while (pch != NULL) {
+            uint8_t keyCode = findKeyCode(pch);
+
+            // if keyCode is not found then it is a character
+            if (keyCode == 0) {
+                Keyboard.press(pch[0]);
+            } else if (keyCode != 0) {
+                Keyboard.press(keyCode);
+            }
+
+            pch = strtok(NULL, ","); // this is to get the next token
+          }
+          Keyboard.releaseAll();
           break;
         }
         

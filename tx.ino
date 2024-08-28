@@ -14,7 +14,7 @@ struct payload_t {
   uint8_t type;  // 0 for mouse movement, 1 for mouse click, 2 for keyboard input
   int8_t x;      // x movement or key/button code
   int8_t y;      // y movement, not used for clicks/keyboard
-  char message[32]; // message
+  char message[128]; // message
   bool isPressed;
 };
 
@@ -127,6 +127,23 @@ void loop() {
       receiving = false;  // Stop receiving mouse data
       payload.type = 3;  // Special key or string input
       strncpy(payload.message, inputString.substring(2).c_str(), sizeof(payload.message) - 1);
+      payload.x = 0;
+      payload.y = 0;
+      payload.isPressed = true;
+
+    }  else if (inputString.startsWith("X,")) {
+      eventMessage = "Sending Key Combinations";
+      receiving = false;  // Stop receiving mouse data
+      payload.type = 4;  // Special key or string input
+      strncpy(payload.message, inputString.substring(2).c_str(), sizeof(payload.message) - 1);
+      // remoe { and } from the string
+      payload.message[strcspn(payload.message, "{")] = 0;
+      payload.message[strcspn(payload.message, "}")] = 0;
+      // serial print the message
+      if(logSerial){ 
+        Serial.println("message");
+        Serial.println(payload.message);
+      }
       payload.x = 0;
       payload.y = 0;
       payload.isPressed = true;
