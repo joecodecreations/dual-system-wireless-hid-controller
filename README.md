@@ -1,4 +1,5 @@
-# Hardware "HID Attack" to Control 2 Computers
+# The "HID Attack" To Wirelessly Control 2 Computers using 1 Mouse & Keyboard 
+Created by [Joey Sanchez](https://github.com/joecodecreations)
 
 1. [Introduction](#hardware-hid-attack-to-control-2-computers)
 2. [What You Can Do with This Project](#what-you-can-do-with-this-project)
