@@ -213,11 +213,32 @@ def keypress():
             handleKeys(key_event)
             off_system = old_off_system
             # web_request = False
+            time.sleep(0.1)
             return jsonify({"status": "success", "key": key}), 200
         return jsonify({"status": "error", "message": "No key provided"}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/multikeypress', methods=['POST'])
+def multikeypress():
+    global off_system, web_request
+    old_off_system = off_system
+    try:
+        string = request.json.get('content')
+        # for each character in the string
+        for key in string:
+            # Create a KeyboardEvent with a dummy scan_code
+            key_event = keyboard.KeyboardEvent(event_type='down', name=key, scan_code=0, time=time.time(), device=None, is_keypad=False)
+            web_request = True
+            off_system = True
+            handleKeys(key_event)
+            off_system = old_off_system
+            # web_request = False
+        return jsonify({"status": "success", "string": string}), 200
 
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
 @app.route('/turnoff-keyboard-mouse', methods=['POST'])
 def turnoff_keyboard_mouse():
     global allow_target_mouse_switching
@@ -265,6 +286,8 @@ keys_without_shift = [
     "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "1", "2", "3", "4", "5", "6",
     "7", "8", "9", "0", "`", "-", "=", "[", "]", ";", "'", ",", ".", "/", "\\",
     "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+    "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "@", "#", "$", "%", "^",
+    "&", "*", "(", ")", "_", "+", "{", "}", "|", ":", '"', "<", ">", "?"
     
 ]
 keys_with_shift = ["~", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+", "{", "}", "|", ":", '"', "<", ">", "?"]
@@ -516,7 +539,7 @@ def send_Keys(handleSpecialKeys):
         print(f"Error while sending keys: {e}")
         
 def handleSpecialKeys(key):
-    print('special keys')
+    # print('special keys')
     global keyboard_wait, special_keys, off_system, isSpecialKeyPressed, special_keys_pressed
     if off_system or web_request:
         if key.name in special_keys:
@@ -544,8 +567,8 @@ def handleSpecialKeys(key):
 
 def handleKeys(key):
     global target_system, keyboard_wait, off_system, isSpecialKeyPressed, special_keys_pressed,keys_without_shift, keys_with_shift
-    print('handle keys called')
-    print(key)
+    # print('handle keys called')
+    print(key.name)
     if key.name in special_keys:
         handleSpecialKeys(key)
     if off_system or web_request:
