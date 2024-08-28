@@ -5,6 +5,7 @@
 3. [Use Cases](#use-cases)
 4. [Wiring](#wiring)
 5. [Installation](#installation)
+6. [Setup](#setup)
 6. [Running the Software](#running-the-software)
 7. [Testing Wireless / Debug](#testing-wireless-independently)
 8. [3D printed Container](#3d-printed-container)
@@ -83,11 +84,35 @@ Make sure you have the ATMEGA32U4 and the NRF2401 sharing grounds between the tw
 
     You can use `Arduino` software to do this. 
 
+# Setup
+
+1. Open `app.py` and change your `target_system` to whatever you're going to control wirelessly (windows, mac, linux)
+
+2. Update `host_system` to reflect whatever OS you'll be running this script on 
+
+
 # Running the software 
 
 run `python app.py` to kick things off. Then, you'll notice that when you take your cursor to the right side of the screen that it will start piping commands via serial to the tx.ino arduino.
 
 When you come back the other direction, it will turn it off. 
+
+## Running Indicator
+
+![Green Dot Indicator](./images/dot.png)
+
+You'll notice an indicator in the bottom right of your **host** system that indicates when the 
+keyboard and mouse should be activated on your **target** system.
+
+The dot is green but feel free to search `green` in the `app.py` and change it to `blue` or `red` or whatever.
+
+## Operations
+When you're controlling the other computer, you should be able to have full control of keyboard and mouse with all the mappings between systems working. 
+
+For instance, if you've set your `target_system = "mac"` and your `host_system = "windows"`, when you hold `[left windows key]` + `[a]` it will `select all` on your target system.
+
+
+
 
 
 # Testing Wireless Independently

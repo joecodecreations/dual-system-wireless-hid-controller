@@ -5,10 +5,14 @@ import mouse
 import time
 import keyboard
 from screeninfo import get_monitors
+import tkinter as tk
+
 
 # Configuration
 host_system = "windows"  # Options: "windows", "linux", "mac"
 target_system = "mac"  # Options: "windows", "linux", "mac"
+
+
 
 
 # Global variables
@@ -106,7 +110,7 @@ def find_microprocessor_port():
 
 
 def main():
-    global host_system, target_system, isSpecialKeyPressed, special_keys_pressed, special_keys, keyboard_wait, off_system, last_keys_pressed, log_mouse_movement, log_key_presses, log_operational_messages, log_microcontroller_messages
+    global tk, host_system, target_system, isSpecialKeyPressed, special_keys_pressed, special_keys, keyboard_wait, off_system, last_keys_pressed, log_mouse_movement, log_key_presses, log_operational_messages, log_microcontroller_messages
     global mlc_sent, mrc_sent, mlcr_sent, mrcr_sent  # Declare these as global to modify them inside the functions
 
 
@@ -318,7 +322,6 @@ def main():
             global off_system
             if off_system:
                 prevent_system_output = True
-            print("Connecting keyboard listeners and setting suppress to: " + str(prevent_system_output))
             keyboard.unhook(keyboard.on_press(handleKeys))
             keyboard.on_press(handleKeys, suppress=prevent_system_output)
 
@@ -353,8 +356,6 @@ def main():
                 if not special_keys_pressed:
                     print("No key pressed")
                     return
-                
-                print('Sending keys: ' + str(special_keys_pressed))
                 isSpecialKeyPressed = False
                 keyboard_wait = False
                 keys_to_send = set()
@@ -377,10 +378,8 @@ def main():
                         keys_to_send.add(key)
                 # always make sure the keys to send are in the order of longest keys first
                 keys_to_send = sorted(keys_to_send, key=len, reverse=True)
-                print(f"\n\nKeys to send: {keys_to_send}")
 
                 if len(keys_to_send) == 1:
-                    print('\n\n single key in special group')
                     key = next(iter(special_keys_pressed))
                     if key in special_keys:
                         key = map_key_to_arduino(host_system, target_system, key)
@@ -401,13 +400,9 @@ def main():
                 
 
         def handleSpecialKeys(key):
-            print(f"key: {key}")
             global keyboard_wait, special_keys, off_system, isSpecialKeyPressed, special_keys_pressed
             if off_system:
                 if key.name in special_keys:
-                        # up or down
-                        upOrDown = key.event_type
-                        # print(f"up or down: {upOrDown}")
                         if key.event_type == keyboard.KEY_DOWN:
                             # if we didnt already press the special key
                             if key.name not in special_keys_pressed:
@@ -446,22 +441,17 @@ def main():
 
                 else:
                     # handle regular typing 
-                    print(f"Key pressed: {key.name}")
                     character = key.name
                     if character in keys_without_shift or character in keys_with_shift:
                         if not keyboard_wait:
                             keyboard_wait = True
-                            print(key.event_type)
                             if key.event_type == keyboard.KEY_DOWN:
                                 ser.write(f"K,{key.name}\n".encode())
                                 if log_key_presses:
                                     print(f"Key pressed DOWN: {key.name}")
                                 keyboard_wait = False
-                        else:
-                            print('keyboard wait')
 
         def handleMouseClick(event):
-            # print("mouse event: " + str(event))
             global off_system
 
             # Ensure the event is a ButtonEvent (ignoring MoveEvent, WheelEvent, etc.)
@@ -482,34 +472,49 @@ def main():
                         on_right_release()
         
         def remove_keyboard_listeners():
-            print("Removing keyboard listeners")
+            if log_operational_messages:
+                print("Removing keyboard listeners")
             keyboard.unhook_all()
+
+
+        # Create a Tkinter root window
+        root = tk.Tk()
+        root.overrideredirect(True)  # Remove window decorations (title bar, etc.)
+        root.attributes("-topmost", True)  # Keep the window on top
+        root.geometry(f"10x10+{right_monitor.x + right_monitor.width - 20}+{right_monitor.y + right_monitor.height - 20}")  # Position the window
+
+      
+        # Create a label to display the icon (a simple colored square in this example)
+        icon_label = tk.Label(root, bg="green")
+        icon_label.pack(fill=tk.BOTH, expand=True)
+
+        def show_icon():
+            root.deiconify()  # Show the window
+
+        def hide_icon():
+            root.withdraw()  # Hide the window
+
+        hide_icon()  # Start with the icon hidden
 
         
         mouse.hook(handleMouseClick)
         
-        
-
-        # connect_keyboard_listeners(False)
-        while True:
+        def check_position():
+            global off_system, log_mouse_movement, log_operational_messages
             try:
-                if ser.in_waiting > 0:
-                    incoming_data = ser.readline().decode("utf-8").strip()
-                    if log_microcontroller_messages:
-                        print(f"Received from microcontroller: {incoming_data}")
-
                 x, y = mouse.get_position()
 
                 if log_mouse_movement:
                     print(f"Mouse position: x={x}, y={y} | Off-system: {off_system}")
 
-                if right_monitor.y <= y <= right_monitor.y + host_height:
+                if right_monitor.y <= y <= right_monitor.y + right_monitor.height:
                     if (
-                        x >= right_monitor.x + host_width - edge_threshold
+                        x >= right_monitor.x + right_monitor.width - edge_threshold
                         and not off_system
                     ):
                         off_system = True
                         connect_keyboard_listeners(True)
+                        show_icon()  # Show the icon when switching to the target system
                         if log_operational_messages:
                             print("Switching to target system...")
 
@@ -519,10 +524,11 @@ def main():
                     elif x <= right_monitor.x + edge_threshold and off_system:
                         off_system = False
                         remove_keyboard_listeners()
+                        hide_icon()  # Hide the icon when switching back to the host system
                         if log_operational_messages:
                             print("Switching back to host system...")
 
-                        move_to_relative(host_width - 2, y - right_monitor.y)
+                        move_to_relative(right_monitor.width - 2, y - right_monitor.y)
                         time.sleep(0.2)
 
                 if off_system:
@@ -530,16 +536,13 @@ def main():
                         print(f"Sending x={x}, y={y}")
                     ser.write(f"M{x},{y}\n".encode())
 
-                time.sleep(0.02)
-            except TimeoutError as e:
-                print(f"Timeout error occurred: {e}")
-                pass
-            except serial.SerialTimeoutException:
-                print(f"Serial timeout occurred")
-                pass 
             except Exception as e:
                 print(f"Error occurred in loop: {e}")
-                break
+            
+            root.after(20, check_position)  # Schedule this function to run again after 20 ms
+
+        check_position()  # Start the loop
+        root.mainloop()  # Start the Tkinter event loop
 
     except Exception as e:
         print(f"Error occurred during setup: {e}")

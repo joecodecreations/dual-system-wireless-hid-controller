@@ -6,7 +6,7 @@
 
 RF24 radio(7, 8);               // nRF24L01(+) radio attached using Getting Started board
 RF24Network network(radio);     // Network uses that radio
-const bool LogSerial = true;
+const bool LogSerial = false; // turn on to log serial output for testing, open serial monitor in arduino for program to actually work if this gets turned on
 const uint16_t this_node = 00;  // Address of our node in Octal format
 const uint16_t other_node = 01; // Address of the other node in Octal format
 
@@ -15,7 +15,7 @@ struct payload_t {
   uint8_t type;  // 0 for mouse movement, 1 for mouse click, 2 for keyboard input
   int8_t x;      // For mouse: x movement; For keyboard: key code; For click: button (1=left, 2=right)
   int8_t y;      // For mouse: y movement; For keyboard and click: not used
-  char message[128]; // message
+  char message[128]; // larger payloads
   bool isPressed;
 };
 
