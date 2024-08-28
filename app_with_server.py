@@ -25,12 +25,12 @@ mouse_left_click = False
 mouse_right_click = False
 mouse_left_released = False
 mouse_right_released = False
-
+allow_target_mouse_switching = True
 log_microcontroller_messages = True
 log_operational_messages = True
 log_mouse_movement = False
 log_key_presses = False
-
+web_request = False
 # Track sent mouse actions
 mlc_sent = False  # Left click sent
 mrc_sent = False  # Right click sent
@@ -189,7 +189,7 @@ root.geometry(f"10x10+{right_monitor.x + right_monitor.width - 20}+{right_monito
 
 
 # Create a label to display the icon (a simple colored square in this example)
-icon_label = tk.Label(root, bg="green")
+icon_label = tk.Label(root, bg="red")
 icon_label.pack(fill=tk.BOTH, expand=True)
 
 
@@ -201,12 +201,38 @@ def start_flask():
 
 @app.route('/keypress', methods=['POST'])
 def keypress():
+    global off_system, web_request
+    old_off_system = off_system
     try:
         key = request.json.get('key')
         if key:
-            handleKeys(keyboard.KeyboardEvent(event_type='down', name=key))
+            # Create a KeyboardEvent with a dummy scan_code
+            key_event = keyboard.KeyboardEvent(event_type='down', name=key, scan_code=0, time=time.time(), device=None, is_keypad=False)
+            web_request = True
+            off_system = True
+            handleKeys(key_event)
+            off_system = old_off_system
+            # web_request = False
             return jsonify({"status": "success", "key": key}), 200
         return jsonify({"status": "error", "message": "No key provided"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/turnoff-keyboard-mouse', methods=['POST'])
+def turnoff_keyboard_mouse():
+    global allow_target_mouse_switching
+    try:
+        allow_target_mouse_switching = False
+        return jsonify({"status": "success"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    
+@app.route('/turnon-keyboard-mouse', methods=['POST'])
+def turnon_keyboard_mouse():
+    global allow_target_mouse_switching
+    try:
+        allow_target_mouse_switching = True
+        return jsonify({"status": "success"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -237,7 +263,9 @@ def mouse_click():
 keys_without_shift = [
     "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
     "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "1", "2", "3", "4", "5", "6",
-    "7", "8", "9", "0", "`", "-", "=", "[", "]", ";", "'", ",", ".", "/", "\\"
+    "7", "8", "9", "0", "`", "-", "=", "[", "]", ";", "'", ",", ".", "/", "\\",
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+    
 ]
 keys_with_shift = ["~", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+", "{", "}", "|", ":", '"', "<", ">", "?"]
 special_keys = [
@@ -292,14 +320,15 @@ def check_position():
                 x >= right_monitor.x + right_monitor.width - edge_threshold
                 and not off_system
             ):
-                off_system = True
-                connect_keyboard_listeners(True)
-                show_icon()  # Show the icon when switching to the target system
-                if log_operational_messages:
-                    print("Switching to target system...")
+                if allow_target_mouse_switching:
+                    off_system = True
+                    connect_keyboard_listeners(True)
+                    show_icon()  # Show the icon when switching to the target system
+                    if log_operational_messages:
+                        print("Switching to target system...")
 
-                mouse.move(right_monitor.x - 10000, y)  # Move cursor off-screen
-                time.sleep(0.1)
+                    mouse.move(right_monitor.x - 10000, y)  # Move cursor off-screen
+                    time.sleep(0.1)
 
             elif x <= right_monitor.x + edge_threshold and off_system:
                 off_system = False
@@ -311,7 +340,7 @@ def check_position():
                 move_to_relative(right_monitor.width - 2, y - right_monitor.y)
                 time.sleep(0.2)
 
-        if off_system:
+        if off_system and allow_target_mouse_switching:
             if log_mouse_movement:
                 print(f"Sending x={x}, y={y}")
             ser.write(f"M{x},{y}\n".encode())
@@ -487,8 +516,9 @@ def send_Keys(handleSpecialKeys):
         print(f"Error while sending keys: {e}")
         
 def handleSpecialKeys(key):
+    print('special keys')
     global keyboard_wait, special_keys, off_system, isSpecialKeyPressed, special_keys_pressed
-    if off_system:
+    if off_system or web_request:
         if key.name in special_keys:
                 if key.event_type == keyboard.KEY_DOWN:
                     # if we didnt already press the special key
@@ -496,12 +526,16 @@ def handleSpecialKeys(key):
                         # add it to our array of key combinations
                         if log_key_presses:
                             print(f"Special Key Added To Combo: {key.name}")
+                
                         special_keys_pressed.add(key.name)
                         # track that we have pressed a special key so that all regular keys get added to combo
                         isSpecialKeyPressed = True
                         if log_key_presses:
                             print(f"Special Key pressed DOWN: {key.name}")
-                        keyboard.hook_key(key.name, handleSpecialKeys)
+                        if web_request:
+                            send_Keys(handleSpecialKeys)
+                        else:
+                            keyboard.hook_key(key.name, handleSpecialKeys)
                 if key.event_type == keyboard.KEY_UP and key.name in special_keys_pressed:
                     if log_key_presses:
                         print(f"Special Key released: {key.name}")
@@ -514,27 +548,34 @@ def handleKeys(key):
     print(key)
     if key.name in special_keys:
         handleSpecialKeys(key)
-    if off_system:
+    if off_system or web_request:
         character = key.name
         # handle key combinations
         if isSpecialKeyPressed:
             print(f"Regular Key Added To Combo: {key.name}")
             if key.event_type == keyboard.KEY_DOWN:
-                special_keys_pressed.add(key.name)
-                if log_operational_messages:
-                    print(f"Key Combo gathering....adding: {key.name}")
+                if web_request:
+                    ser.write(f"S,{key.name}\n".encode())
+                    if log_key_presses:
+                        print(f"Key pressed DOWN: {key.name}")
+                else:
+                    special_keys_pressed.add(key.name)
+                    if log_operational_messages:
+                        print(f"Key Combo gathering....adding: {key.name}")
 
         else:
             # handle regular typing 
             character = key.name
             if character in keys_without_shift or character in keys_with_shift:
-                if not keyboard_wait:
+                if not keyboard_wait or web_request:
                     keyboard_wait = True
                     if key.event_type == keyboard.KEY_DOWN:
                         ser.write(f"K,{key.name}\n".encode())
                         if log_key_presses:
                             print(f"Key pressed DOWN: {key.name}")
                         keyboard_wait = False
+                else:
+                    print('keyboard waiting')
 
 def handleMouseClick(event):
     global off_system
@@ -635,6 +676,7 @@ def main():
 
     except Exception as e:
         print(f"Error occurred during setup: {e}")
+        pass
 
 
 if __name__ == "__main__":
