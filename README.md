@@ -35,7 +35,7 @@ The best part? The secondary computer doesn't know it's being controlled remotel
 
 1. While you can use [mouse without borders from miscrosoft](https://github.com/microsoft/PowerToys) between two windows machines, you cannot as easily control windows + linux or windows + mac combinations with that. *This* will work between *any* OS.
 
-2. Due to security constraints, you may not be able to run software for sharing mice and keyboards on certain computers without getting ***busted***. Using this project, as long as you have a single computer you can control, this will allow you to control the ***other*** safely without being caught.
+2. Due to security constraints, you may not be able to run software for sharing mice and keyboards on certain computers. Using this project, as long as you have a single computer you can control, this will allow you to control the ***other*** safely.
 
 
 

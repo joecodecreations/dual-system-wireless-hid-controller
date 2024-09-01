@@ -7,13 +7,20 @@ import keyboard
 from screeninfo import get_monitors
 import tkinter as tk
 
+# set fail-safe to False
+pyautogui.FAILSAFE = False
 
 # Configuration
 host_system = "windows"  # Options: "windows", "linux", "mac"
 target_system = "mac"  # Options: "windows", "linux", "mac"
 
 
+device_width= 2560
+device_height= 1440
 
+# Target computer's screen dimensions (e.g., MacBook Air M2 Retina)
+target_width = 1728  # Width of the target computer's screen
+target_height = 1117  # Height of the target computer's screen
 
 # Global variables
 mouse_left_click = False
@@ -43,7 +50,11 @@ off_system = False
 keys_without_shift = [
     "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p",
     "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "1", "2", "3", "4", "5", "6",
-    "7", "8", "9", "0", "`", "-", "=", "[", "]", ";", "'", ",", ".", "/", "\\"
+    "7", "8", "9", "0", "`", "-", "=", "[", "]", ";", "'", ",", ".", "/", "\\",
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P",
+    "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "!", "@", "#", "$", "%", "^",
+    "&", "*", "(", ")", "_", "+", "{", "}", "|", ":", '"', "<", ">", "?"
+
 ]
 keys_with_shift = ["~", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "_", "+", "{", "}", "|", ":", '"', "<", ">", "?"]
 special_keys = [
@@ -132,9 +143,7 @@ def main():
         host_width = right_monitor.width
         host_height = right_monitor.height
 
-        # Target computer's screen dimensions (e.g., MacBook Air M2 Retina)
-        target_width = 2560  # Width of the target computer's screen
-        target_height = 1600  # Height of the target computer's screen
+
 
         edge_threshold = 40
         off_system = False
@@ -470,13 +479,20 @@ def main():
                         on_right_click()
                     else:
                         on_right_release()
+                # prevent the event from propagating further
+            return False
         
         def remove_keyboard_listeners():
             if log_operational_messages:
                 print("Removing keyboard listeners")
             keyboard.unhook_all()
 
-
+        def hide_cursor():
+            # Move the mouse cursor to the corner of the screen (or off-screen)
+            pyautogui.moveTo(-4000, -4000)
+        def show_cursor():
+            # Move the mouse cursor to the corner of the screen (or off-screen)
+            pyautogui.moveTo(4000, 4000)
         # Create a Tkinter root window
         root = tk.Tk()
         root.overrideredirect(True)  # Remove window decorations (title bar, etc.)
@@ -513,6 +529,7 @@ def main():
                         and not off_system
                     ):
                         off_system = True
+                        hide_cursor()
                         connect_keyboard_listeners(True)
                         show_icon()  # Show the icon when switching to the target system
                         if log_operational_messages:
@@ -523,6 +540,7 @@ def main():
 
                     elif x <= right_monitor.x + edge_threshold and off_system:
                         off_system = False
+                        show_cursor()
                         remove_keyboard_listeners()
                         hide_icon()  # Hide the icon when switching back to the host system
                         if log_operational_messages:
@@ -534,6 +552,11 @@ def main():
                 if off_system:
                     if log_mouse_movement:
                         print(f"Sending x={x}, y={y}")
+                        # scale from device to target movements
+                        scale_factor_width = target_width / device_width
+                        scale_factor_height = target_height / device_height
+                        x = scale_factor_width * x
+                        y = scale_factor_height * y
                     ser.write(f"M{x},{y}\n".encode())
 
             except Exception as e:

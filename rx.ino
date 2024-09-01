@@ -19,6 +19,7 @@ struct payload_t {
   bool isPressed;
 };
 
+bool skipMove = false;
 bool initialPayloadReceived = false;
 int lastX = 0;
 int lastY = 0;

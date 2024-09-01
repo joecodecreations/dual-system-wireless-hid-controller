@@ -14,6 +14,16 @@ from screeninfo import get_monitors
 import tkinter as tk
 import threading
 from flask import Flask, request, jsonify
+
+
+device_width= 2560
+device_height= 1440
+
+# Target computer's screen dimensions (e.g., MacBook Air M2 Retina)
+target_width = 1728  # Width of the target computer's screen
+target_height = 1117  # Height of the target computer's screen
+
+mouse_compensator_factor = 1.5
 # Configuration
 host_system = "windows"  # Options: "windows", "linux", "mac"
 target_system = "windows"  # Options: "windows", "linux", "mac"
@@ -54,7 +64,7 @@ host_height = right_monitor.height
 target_width = 2560  # Width of the target computer's screen
 target_height = 1600  # Height of the target computer's screen
 
-edge_threshold = 40
+edge_threshold = 40 # measured in pixels
 off_system = False
 last_keys_pressed = set()  # Initialize the set
 
@@ -338,7 +348,9 @@ def check_position():
         if log_mouse_movement:
             print(f"Mouse position: x={x}, y={y} | Off-system: {off_system}")
 
+        # Check if the cursor is on the right monitor
         if right_monitor.y <= y <= right_monitor.y + right_monitor.height:
+            # Check if the cursor is near the right edge of the right monitor
             if (
                 x >= right_monitor.x + right_monitor.width - edge_threshold
                 and not off_system
@@ -366,6 +378,10 @@ def check_position():
         if off_system and allow_target_mouse_switching:
             if log_mouse_movement:
                 print(f"Sending x={x}, y={y}")
+            scale_factor_width = target_width / (device_width * mouse_compensator_factor)
+            scale_factor_height = target_height / (device_height * mouse_compensator_factor)
+            x = scale_factor_width * x
+            y = scale_factor_height * y
             ser.write(f"M{x},{y}\n".encode())
 
     except Exception as e:
@@ -619,6 +635,7 @@ def handleMouseClick(event):
                 on_right_click()
             else:
                 on_right_release()
+    return False
 
 def remove_keyboard_listeners():
     if log_operational_messages:
